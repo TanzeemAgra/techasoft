@@ -1,0 +1,35 @@
+base:
+  project: Techasoft
+  random_state: 20
+  target_col: charges
+
+data_source:
+  s3_source: data/raw/insurance.csv
+
+load_data:
+  raw_dataset_csv: data/raw/insurance.csv
+
+split_data:
+  train_path: data/processed/train_insurance.csv
+  test_path: data/processed/test_insurance.csv
+  test_size: 20
+
+estimators:
+  ElasticNet:
+    params:
+      alpha: 0.8
+      l1_ratio: 0.6
+
+model_dirs: models/models.joblib
+
+#reports:
+# params: reports/params.json
+# score: reports/scores.json
+
+mlflow_config:
+  artificats_dir: artificats
+  experiments_name: ElasticNet
+  run_name: mlops
+  registered_model_name: ElasticNet
+  remote_server_uri: http://127.0.0.1:5000
+
