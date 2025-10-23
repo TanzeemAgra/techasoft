@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+dvc
+mlflow
+psycopg2-binary
+argparse
+jupyterlab
+joblib

@@ -7,8 +7,7 @@ data_source:
   s3_source: data/raw/insurance.csv
 
 load_data:
-  raw_dataset_csv: data/raw/insurance.csv
-
+  raw_dataset_csv: data/raw/insurance_clean.csv
 split_data:
   train_path: data/processed/train_insurance.csv
   test_path: data/processed/test_insurance.csv
