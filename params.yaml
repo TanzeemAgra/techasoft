@@ -21,14 +21,14 @@ estimators:
 
 model_dirs: models/models.joblib
 
-#reports:
-# params: reports/params.json
-# score: reports/scores.json
+reports:
+ params: reports/params.json
+ score: reports/scores.json
 
-mlflow_config:
-  artificats_dir: artificats
-  experiments_name: ElasticNet
-  run_name: mlops
-  registered_model_name: ElasticNet
-  remote_server_uri: http://127.0.0.1:5000
+# mlflow_config:
+#   artificats_dir: artificats
+#   experiments_name: ElasticNet
+#   run_name: mlops
+#   registered_model_name: ElasticNet
+#   remote_server_uri: http://127.0.0.1:5000
 
