@@ -11,6 +11,8 @@ from sklearn.linear_model import ElasticNet
 import joblib
 import json
 from urllib.parse import urlparse
+import mlflow
+
 
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))
@@ -26,10 +28,8 @@ def train_and_evaluate(config_path):
     split_ratio = config["split_data"]["test_size"]
     random_state = config["base"]["random_state"]
     model_path = config["model_dirs"]
-
     alpha = config["estimators"]["ElasticNet"]["params"]["alpha"]
     l1_ratio = config["estimators"]["ElasticNet"]["params"]["l1_ratio"]
-
     target = config["base"]["target_col"]
     train = pd.read_csv(train_data_path, sep=",")
     test = pd.read_csv(test_data_path, sep=",")
@@ -46,30 +46,27 @@ def train_and_evaluate(config_path):
 
     ###########################################
 
-    lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=random_state)
-    lr.fit(train_x, train_y)
+    mlflow_config = config["mlflow_config"]
+    remote_server_uri = mlflow_config["remote_server_uri"]
+    mlflow.set_tracking_uri(remote_server_uri)
+    with mlflow.start_run(run_name=mlflow_config["run_name"]) as mlops_runs:
+        lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=random_state)
+        lr.fit(train_x, train_y)
+        predicted_values = lr.predict(test_x)
+        (rmse, mae, r2) = eval_metrics(test_y, predicted_values)
+        mlflow.log_param("alpha", alpha)
+        mlflow.log_param("l1_ratio", l1_ratio)
 
-    predicted_values = lr.predict(test_x)
+        mlflow.log_metric("rmse", rmse)
+        mlflow.log_metric("mae", mae)
+        mlflow.log_metric("r2", r2)
 
-    (rmse, mae, r2) = eval_metrics(test_y, predicted_values)
+        tracking_uri_type_score = urlparse(mlflow.get_artifact_uri()).scheme
 
-    score_files = config["reports"]["score"]
-    params_files = config["reports"]["params"]
-
-    with open(score_files, "w") as f:
-        scores = {
-            "rmse": rmse,
-            "mae" : mae,
-            "r2": r2
-        }
-        json.dump(scores, f, indent=4)
-
-    with open(params_files, "w") as f:
-        params = {
-            "alpha": alpha,
-            "l1_ratio" : l1_ratio,
-        }
-        json.dump(params, f, indent=4)
+        if tracking_uri_type_score !="file" :
+            mlflow.sklearn.log_model(lr, "models", registered_model_name=mlflow_config["registered_model_name"])
+        else:
+            mlflow.sklearn.log_model(lr, "models")
 
     # Create model directory and save model properly
     model_directory = os.path.dirname(model_path)

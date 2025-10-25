@@ -1,0 +1,22 @@
+artifact_path: file:///C:/Users/Xerxez Solutions/Desktop/Techasoft/artifacts/0/models/m-1ab1b7c59ae949cbabdbcbac64a461c8/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.9
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.2
+mlflow_version: 3.5.1
+model_id: m-1ab1b7c59ae949cbabdbcbac64a461c8
+model_size_bytes: 707
+model_uuid: m-1ab1b7c59ae949cbabdbcbac64a461c8
+prompts: null
+run_id: 7f58f6b73f5e4594b2da2f192275e8cc
+utc_time_created: '2025-10-25 16:53:07.484574'
