@@ -16,8 +16,11 @@ split_data:
 estimators:
   ElasticNet:
     params:
-      alpha: 0.7
-      l1_ratio: 0.3
+      alpha: 1.0
+      l1_ratio: 0.1
+    experiment_params:
+      alpha_values: [0.1, 0.3, 0.5, 0.7, 1.0]
+      l1_ratio_values: [0.1, 0.3, 0.5, 0.7, 0.9]
 
 model_dirs: models/models.joblib
 
@@ -27,8 +30,15 @@ model_dirs: models/models.joblib
 
 mlflow_config:
   artificats_dir: artificats
-  experiments_name: ElasticNet
+  experiments_name: Default
   run_name: mlops
   registered_model_name: ElasticNet
   remote_server_uri: http://127.0.0.1:5000
+
+model_deployment:
+  production_stage: "Production"
+  staging_stage: "Staging"
+  archived_stage: "Archived"
+  metric_for_best_model: "rmse"  # Metric to use for finding best model
+  sort_order: "DESC"  # DESC for highest value, ASC for lowest value
 
