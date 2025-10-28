@@ -52,8 +52,24 @@ class RegressionMLOps:
             # Show experiment parameters if available
             experiment_params = config['estimators']['ElasticNet'].get('experiment_params', {})
             if experiment_params:
-                print(f"   Experiment Alpha Values: {experiment_params.get('alpha_values', 'Not configured')}")
-                print(f"   Experiment L1 Ratio Values: {experiment_params.get('l1_ratio_values', 'Not configured')}")
+                alpha_vals = experiment_params.get('alpha_values', 'Not configured')
+                l1_ratio_vals = experiment_params.get('l1_ratio_values', 'Not configured')
+                max_exp = experiment_params.get('max_experiments', 25)
+                
+                print(f"   Experiment Alpha Values: {alpha_vals}")
+                print(f"   Experiment L1 Ratio Values: {l1_ratio_vals}")
+                print(f"   Max Experiments: {max_exp}")
+                
+                # Show parameter type (single or list)
+                if isinstance(alpha_vals, list):
+                    print(f"   Alpha format: List ({len(alpha_vals)} values)")
+                else:
+                    print(f"   Alpha format: Single value")
+                    
+                if isinstance(l1_ratio_vals, list):
+                    print(f"   L1 Ratio format: List ({len(l1_ratio_vals)} values)")
+                else:
+                    print(f"   L1 Ratio format: Single value")
             
             print(f"   MLflow URI: {config['mlflow_config']['remote_server_uri']}")
             print(f"   Experiment: {config['mlflow_config']['experiments_name']}")
@@ -221,42 +237,75 @@ class RegressionMLOps:
                 print("   estimators:")
                 print("     ElasticNet:")
                 print("       experiment_params:")
-                print("         alpha_values: [0.1, 0.5, 1.0]")
-                print("         l1_ratio_values: [0.1, 0.5, 0.9]")
+                print("         alpha_values: 0.5  # Single value")
+                print("         l1_ratio_values: 0.3  # Single value")
+                print("         # OR use lists: alpha_values: [0.1, 0.5, 1.0]")
                 return False
             
-            alpha_values = experiment_config.get("alpha_values", [])
-            l1_ratio_values = experiment_config.get("l1_ratio_values", [])
+            # Validate parameter values
+            alpha_values = experiment_config.get("alpha_values")
+            l1_ratio_values = experiment_config.get("l1_ratio_values")
             
-            if not alpha_values or not l1_ratio_values:
-                print("⚠️  Incomplete experiment configuration!")
-                if not alpha_values:
-                    print("   Missing 'alpha_values' in experiment_params")
-                if not l1_ratio_values:
-                    print("   Missing 'l1_ratio_values' in experiment_params")
+            if alpha_values is None or l1_ratio_values is None:
+                print("⚠️  Missing parameter values in experiment_params!")
+                print("   Required: alpha_values and l1_ratio_values")
                 return False
+            
+            # Convert single values to lists for uniform processing
+            if not isinstance(alpha_values, list):
+                alpha_values = [alpha_values]
+            if not isinstance(l1_ratio_values, list):
+                l1_ratio_values = [l1_ratio_values]
             
             # Validate parameter ranges
             for alpha in alpha_values:
-                if alpha <= 0:
-                    print(f"❌ Invalid alpha value: {alpha}. Must be positive.")
+                if not isinstance(alpha, (int, float)) or alpha <= 0:
+                    print(f"❌ Invalid alpha value: {alpha}. Must be a positive number.")
                     return False
             
             for l1_ratio in l1_ratio_values:
-                if not (0 <= l1_ratio <= 1):
+                if not isinstance(l1_ratio, (int, float)) or not (0 <= l1_ratio <= 1):
                     print(f"❌ Invalid l1_ratio value: {l1_ratio}. Must be between 0 and 1.")
                     return False
             
             total_combinations = len(alpha_values) * len(l1_ratio_values)
-            if total_combinations > 50:
-                print(f"⚠️  Large experiment: {total_combinations} combinations configured!")
-                print("   Consider reducing parameter ranges for faster experimentation.")
+            max_experiments = experiment_config.get("max_experiments", 25)
             
+            if total_combinations > max_experiments:
+                print(f"⚠️  Large experiment: {total_combinations} combinations!")
+                print(f"   Exceeds max_experiments limit of {max_experiments}")
+                print("   Consider reducing parameter values or increasing max_experiments")
+            
+            print("✅ Parameter configuration validated")
             return True
             
         except Exception as e:
             print(f"❌ Configuration validation failed: {str(e)}")
             return False
+    
+    def _get_parameter_values(self, experiment_config: Dict) -> Tuple[List[float], List[float]]:
+        """Extract and normalize parameter values from config."""
+        alpha_values = experiment_config.get("alpha_values")
+        l1_ratio_values = experiment_config.get("l1_ratio_values")
+        
+        # Convert single values to lists for uniform processing
+        if not isinstance(alpha_values, list):
+            alpha_values = [alpha_values]
+        if not isinstance(l1_ratio_values, list):
+            l1_ratio_values = [l1_ratio_values]
+        
+        # Convert to float and validate
+        try:
+            alpha_values = [float(a) for a in alpha_values if a is not None]
+            l1_ratio_values = [float(l) for l in l1_ratio_values if l is not None]
+        except (ValueError, TypeError) as e:
+            print(f"❌ Error converting parameter values to float: {e}")
+            # Fallback to base parameters
+            base_alpha = self.config["estimators"]["ElasticNet"]["params"]["alpha"]
+            base_l1_ratio = self.config["estimators"]["ElasticNet"]["params"]["l1_ratio"]
+            return [float(base_alpha)], [float(base_l1_ratio)]
+        
+        return alpha_values, l1_ratio_values
     
     def experiment_with_parameters(self) -> List[Dict]:
         """Train multiple models with different parameter combinations."""
@@ -276,8 +325,7 @@ class RegressionMLOps:
         
         # Get experiment parameter values from config
         experiment_config = self.config["estimators"]["ElasticNet"]["experiment_params"]
-        alpha_values = experiment_config["alpha_values"]
-        l1_ratio_values = experiment_config["l1_ratio_values"]
+        alpha_values, l1_ratio_values = self._get_parameter_values(experiment_config)
         
         # Ensure base parameters are included
         if base_alpha not in alpha_values:
@@ -291,15 +339,27 @@ class RegressionMLOps:
         
         param_combinations = [(alpha, l1_ratio) for alpha in alpha_values for l1_ratio in l1_ratio_values]
         
-        print(f"📊 Parameter experimentation configuration:")
+        print(f"\n📊 Parameter experimentation configuration:")
         print(f"   Total combinations: {len(param_combinations)}")
         print(f"   Alpha values: {alpha_values}")
         print(f"   L1-ratio values: {l1_ratio_values}")
         print(f"   Base config: α={base_alpha}, l1_ratio={base_l1_ratio}")
         
+        # Confirm before proceeding with many combinations
+        if len(param_combinations) > 5:
+            try:
+                confirm = input(f"\n❓ Proceed with {len(param_combinations)} combinations? (y/N): ").lower().strip()
+                if confirm not in ['y', 'yes']:
+                    print("⏹️  Experimentation cancelled by user")
+                    return []
+            except KeyboardInterrupt:
+                print("\n⏹️  Experimentation cancelled by user")
+                return []
+        
         results = []
         total_combinations = len(param_combinations)
         
+        print(f"\n🚀 Starting model training...")
         for i, (alpha, l1_ratio) in enumerate(param_combinations, 1):
             print(f"📈 Progress: {i}/{total_combinations}")
             result = self.train_and_register_model(alpha, l1_ratio)
@@ -584,7 +644,7 @@ def main():
 Examples:
   python regression_Mlops.py                           # Run complete MLOps workflow
   python regression_Mlops.py --action train-config    # Train model with config parameters
-  python regression_Mlops.py --action experiment      # Run parameter experiments only
+  python regression_Mlops.py --action experiment      # Run parameter experiments from config
   python regression_Mlops.py --action find-best       # Find best model only  
   python regression_Mlops.py --action deploy          # Deploy best model only
   python regression_Mlops.py --action status          # Show deployment status

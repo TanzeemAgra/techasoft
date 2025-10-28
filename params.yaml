@@ -19,8 +19,18 @@ estimators:
       alpha: 1.0
       l1_ratio: 0.1
     experiment_params:
-      alpha_values: [0.1, 0.3, 0.5, 0.7, 1.0]
-      l1_ratio_values: [0.1, 0.3, 0.5, 0.7, 0.9]
+      # Simple parameter configuration - just specify the values you want to test
+      # Single values for simple experiments
+      alpha_values: 0.9
+      l1_ratio_values: 0.3
+      
+      # Alternative: You can also use lists if needed
+      # alpha_values: [0.1, 0.5, 1.0]
+      # l1_ratio_values: [0.1, 0.5, 0.9]
+      
+      # Experiment settings
+      max_experiments: 5  # Maximum number of parameter combinations to try
+      enable_validation: true  # Validate parameter ranges
 
 model_dirs: models/models.joblib
 
